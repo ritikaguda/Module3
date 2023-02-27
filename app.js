@@ -1,97 +1,97 @@
-(function(){
-  'use strict';
-  angular.module('NarrowItDownApp', [])
-  .controller('NarrowItDownController', NarrowItDownController)
-  .service('MenuSearchService', MenuSearchService)
-  .directive('foundItems', FoundItemsDirective);
+(function () {
+    'use strict';
 
-  MenuSearchService.$inject=['$http']
-  function MenuSearchService($http) {
-    var menu = this ;
-    items = [];
-    menu.getMenuItems = function () {
-      return menu.items ;
+    angular.module('App', [])
+        .controller('NarrowItDownController', NarrowItDownController)
+        .service('MenuSearchService', MenuSearchService)
+        .directive('foundItems', foundItemsDirective)
+        .constant('ApiUrl', "https://coursera-jhu-default-rtdb.firebaseio.com/menu_items.json");
+
+
+    function foundItemsDirective() {
+        var ddo = {
+            templateUrl: 'foundItems.html',
+            controller: NarrowItDownController,
+            controllerAs: 'controller',
+            scope: {
+                items: '<',
+                onRemove: '&',
+            },
+            bindToController: true,
+        };
+
+        return ddo;
     }
-    menu.getMatchedMenuItems = function (searchValue) {
-      return $http({
-        method : "GET",
-        url : ("https://coursera-jhu-default-rtdb.firebaseio.com/menu_items.json"),
-        params:{}
-      })
-      .then(function(result) {
-        items  = getMatchedData(searchValue,result);
-        return items ;
-      });
-      return menuItems ;
-    }
-    menu.removeItem = function(index){
-      items.splice(index,1);
-    }
-  }
-  NarrowItDownController.$inject = ['MenuSearchService'];
-  function NarrowItDownController(MenuSearchService) {
-    var narrow = this ;
-    narrow.found = [];
-    narrow.titles = {
-      // no : "NO",
-      name :"NAME",
-      description : "DESCRIPTION",
-      short_name : "SHORT NAME"
-    };
-  }
-  function FoundItemsDirective() {
-    var ddo ={
-      scope : {
-        titles:"<",
-        found:"<",
-        remove : "&"
-      },
-      templateUrl : "foundItems.html",
-      controller : FoundItemsDirectiveController,
-      controllerAs : 'founds',
-      bindToController: true
-    };
-    return ddo;
-  }
-  function FoundItemsDirectiveController() {
-    var founds = this;
-    console.log(founds.found);
-    founds.isDataComing = function() {
-      if(founds.found.length == 0)
-      return false
-      return true ;
-    }
-  }
-  narrow.removeMenuItem = function (index) {
-    MenuSearchService.removeItem(index);
-  }
-  narrow.getItems = function (searchValue) {
-    // returning a promise and then function is usable
-    var promise =MenuSearchService.getMatchedMenuItems(searchValue);
-    promise.then(function(items){
-      narrow.found = items;
-      if(narrow.found.length > 0 ){
-        narrow.searched = false ;}
-        else {
-          narrow.searched = true ;
+
+    NarrowItDownController.$inject = ['MenuSearchService'];
+
+    function NarrowItDownController(MenuSearchService) {
+        this.found = [];
+        this.searchTerm = "";
+        this.service = MenuSearchService;
+        this.findItemsCalled = false;
+
+        this.findItems = function () {
+            this.findItemsCalled = true;
+            var promise = this.service.getMatchedMenuItems(this.searchTerm);
+            promise.then((result) => {
+                this.found = result;
+            });
         }
-        console.log(narrow.found);
-      })
-      .catch(function (error) {
-        console.log("Something went terribly wrong.");
-      });
-    }
-    function getMatchedData(searchValue,result) {
-      var returnItems = [];
-      if(!searchValue){
-        return  returnItems ;
-      }
-      var items  =  result.data.menu_items;
-      for (var i = 0; i < items.length; i++) {
-        if (items[i].description.toLowerCase().indexOf(searchValue.toLowerCase()) !== -1) {
-          returnItems.push(items[i]);
+
+        this.removeItem = function (index) {
+            this.found.splice(index, 1);
         }
-      }
-      return returnItems ;
+
+        this.shouldShowNothingFound = function (){
+            return this.found.length === 0 && this.findItemsCalled;
+        }
     }
-});
+
+    MenuSearchService.$inject = ['$http', 'ApiUrl'];
+
+    function MenuSearchService($http, ApiUrl) {
+        this.getMatchedMenuItems = function (searchTerm) {
+            searchTerm = searchTerm.toLowerCase();
+            var promise = this.getMenuItems()
+                .then(function (response) {
+                    var matchedItems = [];
+                    if (searchTerm === "") return matchedItems;
+                    var responseData = response.data;
+                    var keys = Object.keys(responseData);
+                    keys.forEach(key => {
+                        var menuItems = responseData[key]["menu_items"];
+                        menuItems.forEach(menuItem => {
+                            if (menuItem.description.toLowerCase().includes(searchTerm)) {
+                                matchedItems.push(new Item(menuItem.name, menuItem.short_name, menuItem.description))
+                            }
+                        });
+                    });
+                    return matchedItems;
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+            return promise;
+        };
+
+        this.getMenuItems = function () {
+            return $http({
+                method: "GET",
+                url: (ApiUrl),
+                response: "json"
+            });
+        };
+
+    }
+
+
+    class Item {
+        constructor(name, shortName, description) {
+            this.name = name;
+            this.shortName = shortName;
+            this.description = description;
+        }
+    }
+
+})();
