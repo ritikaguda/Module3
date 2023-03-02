@@ -78,7 +78,7 @@
         this.getMenuItems = function () {
             return $http({
                 method: "GET",
-                url: (ApiUrl),
+                url: "https://coursera-jhu-default-rtdb.firebaseio.com/menu_items.json",
                 response: "json"
             });
         };
