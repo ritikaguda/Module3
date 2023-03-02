@@ -4,8 +4,7 @@
     angular.module('App', [])
         .controller('NarrowItDownController', NarrowItDownController)
         .service('MenuSearchService', MenuSearchService)
-        .directive('foundItems', foundItemsDirective)
-        .constant('ApiUrl', "https://coursera-jhu-default-rtdb.firebaseio.com/menu_items.json");
+        .directive('foundItems', foundItemsDirective);
 
 
     function foundItemsDirective() {
@@ -78,7 +77,7 @@
         this.getMenuItems = function () {
             return $http({
                 method: "GET",
-                url: "https://coursera-jhu-default-rtdb.firebaseio.com/menu_items.json",
+                url: "",
                 response: "json"
             });
         };
